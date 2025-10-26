@@ -9,6 +9,7 @@ use Botble\Base\Traits\LoadAndPublishDataTrait;
 use Botble\SeoHelper\Facades\SeoHelper;
 use Botble\SeoHelper\Forms\SeoForm;
 use Botble\Theme\Events\RenderingThemeOptionSettings;
+use Illuminate\Support\Facades\View;
 
 class SeoMetaKeywordsServiceProvider extends ServiceProvider
 {
@@ -49,6 +50,11 @@ class SeoMetaKeywordsServiceProvider extends ServiceProvider
 
                 if (! empty($meta['seo_keywords'])) {
                     SeoHelper::meta()->addMeta('keywords', $meta['seo_keywords']);
+                } else {
+                    $globalKeywords = theme_option('seo_keywords');
+                    if ($globalKeywords) {
+                        SeoHelper::meta()->addMeta('keywords', $globalKeywords);
+                    }
                 }
             }, 57, 2);
 
@@ -72,18 +78,16 @@ class SeoMetaKeywordsServiceProvider extends ServiceProvider
                     ]);
             });
 
-            add_filter(THEME_FRONT_HEADER, function (?string $html): ?string {
-                $globalKeywords = theme_option('seo_keywords');
+            View::composer(['packages/theme::partials.header', '*::partials.header'], function (): void {
+                $existingMeta = SeoHelper::meta()->render();
 
-                if ($globalKeywords) {
-                    $existingMeta = SeoHelper::meta()->render();
-                    if (! str_contains($existingMeta, 'name="keywords"')) {
+                if (! str_contains($existingMeta, 'name="keywords"')) {
+                    $globalKeywords = theme_option('seo_keywords');
+                    if ($globalKeywords) {
                         SeoHelper::meta()->addMeta('keywords', $globalKeywords);
                     }
                 }
-
-                return $html;
-            }, 5);
+            });
         });
     }
 }
